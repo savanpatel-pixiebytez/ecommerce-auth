@@ -13,13 +13,14 @@ const {
   getUser,
   updateUser,
   isAuthenticated,
+  confirmationMail,
 } = require("../Controller/User");
 
 // Params
 router.param("userId", findUserById);
 
 // Authentication Routes
-router.post("/signup", signup);
+router.post("/signup", signup, confirmationMail);
 
 router.post("/signin", signin);
 

@@ -28,24 +28,23 @@ const User = sequelize.define(
       type: DataTypes.STRING,
       allowNull: false,
       isEmail: true,
-      unique: {
-        args: true,
-        msg: "Email address already in use!",
-      },
-      trim: true,
+      // unique: {
+      //   args: true,
+      //   msg: "Email address already in use!",
+      // },
     },
 
     password: {
       type: DataTypes.STRING,
       allowNull: false,
-      is: /^(?=.*[a-z])(?=.*[A-Z])(?=.*d)(?=.*[@$!%*?&])[A-Za-zd@$!%*?&]{8,}$/i,
-      set(value) {
-        this.salt = uuidv4();
-        this.setDataValue(
-          "password",
-          crypto.createHash("sha256", this.salt).update(value).digest("hex")
-        );
-      },
+      // is: /^(?=.*[a-z])(?=.*[A-Z])(?=.*d)(?=.*[@$!%*?&])[A-Za-zd@$!%*?&]{8,}$/i,
+      // set(value) {
+      //   this.salt = uuidv4();
+      //   this.setDataValue(
+      //     "password",
+      //     crypto.createHash("sha256", this.salt).update(value).digest("hex")
+      //   );
+      // },
     },
 
     salt: {
@@ -61,16 +60,6 @@ const User = sequelize.define(
   },
   { timestamps: true }
 );
-
-// User.hasMany(Product, { as: "products" });
-
-User.prototype.validPassword = function (enteredpassword) {
-  let enteredPwdEncrypted = crypto
-    .createHash("sha256", this.salt)
-    .update(enteredpassword)
-    .digest("hex");
-  return enteredPwdEncrypted === this.password;
-};
 
 module.exports = User;
 

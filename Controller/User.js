@@ -1,22 +1,11 @@
 const UserModel = require("../Model/User");
 var jwt = require("jsonwebtoken");
+const bcrypt = require("bcrypt");
 require("dotenv").config();
 var expressJwt = require("express-jwt");
+const nodemailer = require("nodemailer");
 
 // Params
-
-// exports.findUserById = (tutorialId) => {
-//   UserModel.findByPk(userId, { include: ["products"] })
-//     .then((user) => {
-//       req.profile = user;
-//       next();
-//     })
-//     .catch((err) => {
-//       return res.status(400).json({
-//         error: "No user found in DB",
-//       });
-//     });
-// };
 
 exports.findUserById = (req, res, next, id) => {
   UserModel.findOne({ where: { id: id } })
@@ -34,13 +23,34 @@ exports.findUserById = (req, res, next, id) => {
 // Signup Controller
 exports.signup = async (req, res, next) => {
   const data = req.body;
-  console.log(data);
   try {
-    const user = await UserModel.create(data);
-    res.status(200).json({
-      success: true,
-      message: "User created.",
-    });
+    UserModel.count({ where: { email: data["email"] } })
+      .then(async (emailCount) => {
+        if (emailCount == 0) {
+          //TODO: /^(?=.*[a-z])(?=.*[A-Z])(?=.*d)(?=.*[@$!%*?&])[A-Za-zd@$!%*?&]{8,}$/i  Implement regex
+          const password = data["password"];
+          const saltRounds = 11;
+          const securePassword = await bcrypt.hash(password, saltRounds);
+          data["password"] = securePassword;
+          const user = await UserModel.create(data);
+        } else {
+          return res.status(500).json({
+            success: false,
+            message: "Email already exists",
+          });
+        }
+      })
+      .catch((err) => {
+        return res.status(400).json({
+          error: "Email Already exists",
+        });
+      });
+
+    // res.status(200).json({
+    //   success: true,
+    //   message: "User created.",
+    // });
+    next();
   } catch (error) {
     console.log(error);
     res.status(500).json({
@@ -55,17 +65,18 @@ exports.signin = (req, res, next) => {
   const { email, password } = req.body;
 
   UserModel.findOne({ where: { email: email } })
-    .then((user) => {
+    .then(async (user) => {
       if (!user) {
         return res.status(401).json({
           err: "No User Found",
         });
-      } else if (!user.validPassword(password)) {
-        console.log("invalid pass");
-        return res.status(401).json({
-          err: "Password do not match",
-        });
       } else {
+        const login = await bcrypt.compare(password, user["password"]);
+        if (!login) {
+          return res.status(401).json({
+            err: "Password do not match",
+          });
+        }
         //create token for cookie
         const token = jwt.sign({ _id: user.id }, process.env.SECRET);
 
@@ -168,4 +179,36 @@ exports.updateUser = (req, res) => {
         error: "Unauthorised to change the information",
       });
     });
+};
+
+exports.confirmationMail = async (req, res) => {
+  console.log(req.body);
+  try {
+    let transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: "savan.gatesaniya@gmail.com", // generated ethereal user
+        pass: process.env.EMAIL_PASSWORD, // generated ethereal password
+      },
+    });
+
+    // send mail with defined transport object
+    let info = await transporter.sendMail({
+      from: "savan.gatesaniya@gmail.com", // sender address
+      to: req.body.email, // list of receivers
+      subject: "Hello ✔", // Subject line
+      text: "Hello world?", // plain text body
+      html: "<b>Hello world?</b>", // html body
+    });
+    res.status(200).json({
+      success: true,
+      msg: "User created",
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({
+      success: false,
+      message: error,
+    });
+  }
 };
